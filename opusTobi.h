@@ -5,6 +5,7 @@
 
 #include "opus.h"
 
+
 #define FRAME_SIZE 960
 #define APPLICATION OPUS_APPLICATION_AUDIO
 #define BITRATE 64000
@@ -16,6 +17,7 @@
 
 #define VERBOSE 1
 
+extern int NBbytes[];
 
 struct opus {
    OpusDecoder *decoder;
@@ -33,5 +35,6 @@ struct frame {
 
 int_fast8_t decodeOpusFrame(struct opus *opus_t);
 int initOpus(struct opus *opus_t);
+void getPcm(struct frame *frame_t);
 
 #endif

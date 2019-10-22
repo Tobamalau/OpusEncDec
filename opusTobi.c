@@ -1,8 +1,12 @@
 /*lib for Opos functions created by Tobias*/
 
 #include "opusTobi.h"
+#include "opusFile.c"
 #include <stdio.h>
 
+int NBbytes[] = {249,134,135,258,189,161,161,161,161,161,161,161,161,161,161,161,161,161,161,161,
+                          104,114,207,175,181,162,184,161,161,161,161,145,177,161,161,157,165,152,137,193,
+                          144,179,154,168,161,161,161,161,161,161,161,137,128,161,148,142,166};
 
 int_fast8_t decodeOpusFrame(struct opus *opus_t)
 {
@@ -38,3 +42,13 @@ int initOpus(struct opus *opus_t)
    }
    return 1;
 }
+
+void getPcm(struct frame *frame_t)
+{
+   frame_t->opus_t->input = marioTestenc_opus + frame_t->nbbytessum;
+   frame_t->opus_t->nbBytes = NBbytes[frame_t->loopcnt];
+   decodeOpusFrame(frame_t->opus_t);
+   frame_t->nbbytessum += frame_t->opus_t->nbBytes;
+   frame_t->loopcnt++;
+}
+
