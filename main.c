@@ -27,7 +27,9 @@ struct opusfile {
    //unsigned char pcm_bytes[MAX_FRAME_SIZE*CHANNELS*2];
 } OpusInstanz = {NULL, NBBYTES, MAX_FRAME_SIZE, NULL, MAX_PACKET_SIZE, {}, {}};
 
-int NBbytes[] = {249,134,135,258,189,161,161,161,161,161,161,161,161,161,161,161,161,161,161,161,104,114,207,175,181,162,184,161,161,161,161,145,177,161,161,157,165,152,137,193,144,179,154,168,161,161,161,161,161,161,161,137,128,161,148,142,166};
+int NBbytes[] = {249,134,135,258,189,161,161,161,161,161,161,161,161,161,161,161,161,161,161,161,
+                 104,114,207,175,181,162,184,161,161,161,161,145,177,161,161,157,165,152,137,193,
+                 144,179,154,168,161,161,161,161,161,161,161,137,128,161,148,142,166};
 
 int_fast8_t decodeOpus(struct opusfile *lib)
 {
@@ -70,6 +72,7 @@ int main()
       decodeOpus(&OpusInstanz);
       nbbytessum += OpusInstanz.nbBytes;
       loopcnt++;
+      printf("NBbytes: %d", sizeof(NBbytes));
       if(sizeof(NBbytes)<loopcnt)
       {
          printf("nbbytessum:%d\tloopcnt:%d",nbbytessum, loopcnt);
