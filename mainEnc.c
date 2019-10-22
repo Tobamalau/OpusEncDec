@@ -68,7 +68,9 @@ int main(int argc, char **argv)
       fprintf(stderr, "failed to create decoder: %s\n", opus_strerror(err));
       return EXIT_FAILURE;
    }
-   outFile = "/home/tobi/src/opusTrivial_example/MarioTestEncDec.wav";
+   //outFile = "/home/tobi/src/opusTrivial_example/MarioTestEncDec.wav";
+   outFile = "/home/tobi/src/opusTrivial_example/marioTestenc.opus";
+
    fout = fopen(outFile, "w");
    if (fout==NULL)
    {
@@ -98,10 +100,11 @@ int main(int argc, char **argv)
          fprintf(stderr, "encode failed: %s\n", opus_strerror(nbBytes));
          return EXIT_FAILURE;
       }
+      printf("%d,", nbBytes);
       /*int bandwith = opus_packet_get_bandwidth(cbits);
       int nb_channels = opus_packet_get_nb_channels(cbits);
       int nb_frames = opus_packet_get_nb_frames(cbits, nbBytes);*/
-      //fwrite(cbits, sizeof(short), nbBytes, fout);
+      fwrite(cbits, sizeof(char), nbBytes, fout);
 
 
       /* Decode the data. In this example, frame_size will be constant because
@@ -126,7 +129,7 @@ int main(int argc, char **argv)
       }
       i=0;
       /* Write the decoded audio to file. */
-      fwrite(pcm_bytes, sizeof(short), frame_size*CHANNELS, fout);
+      //fwrite(pcm_bytes, sizeof(short), frame_size*CHANNELS, fout);
    }
    /*Destroy the encoder state*/
    opus_encoder_destroy(encoder);
