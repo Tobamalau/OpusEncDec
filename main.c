@@ -28,6 +28,7 @@ int main()
    {
       if(newFrame)
       {
+
          getPcm(&FrameInstanz);
          printf("pcm:%o", OpusInstanz.pcm_bytes[0]);
       }
