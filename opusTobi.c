@@ -12,7 +12,7 @@ int NBbytes[] = {249,134,135,258,189,161,161,161,161,161,161,161,161,161,161,161
 int_fast8_t decodeOpusFrame(struct opus *opus_t)
 {
    memset(opus_t->pcm_bytes, '\0', sizeof(opus_t->pcm_bytes));
-   //opus_decoder_ctl(opus_t->decoder, OPUS_SET_BITRATE(10630));
+   //getopus_decoder_ctl(opus_t->decoder, OPUS_SET_BITRATE(10630));
    int frame_size = opus_decode(opus_t->decoder, opus_t->input, opus_t->nbBytes, opus_t->out, MAX_FRAME_SIZE, 0);
    if (frame_size<0)
    {
