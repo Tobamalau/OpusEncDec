@@ -4,15 +4,21 @@
 #include "opus.h"
 #include <stdio.h>
 
+
 /*The frame size is hardcoded for this sample code but it d../../../../usr/local/include/opusoesn't have to be*/
 #define FRAME_SIZE 960
-#define SAMPLE_RATE 48000
+#define SAMPLE_RATE 24000 //Sampling rate of input signal (Hz)
 #define CHANNELS 1
 #define APPLICATION OPUS_APPLICATION_AUDIO
-#define BITRATE 64000
-
+#define BITRATE 192000   //bitrate in bits per second 768000=48kHz, 384000=24kHz, 192000=12kHz (500 to 512000 bits per second)
 #define MAX_FRAME_SIZE 6*960
 #define MAX_PACKET_SIZE (3*1276)
+
+
+char Path[] = "/home/tobi/src/opusTrivial_example/MusikRohdateien/";
+char Filename[] = "youtube24_11.wav";
+
+char *my_itoa(int wert, int laenge);
 
 int main(int argc, char **argv)
 {
@@ -29,6 +35,9 @@ int main(int argc, char **argv)
    OpusDecoder *decoder;
    int err;
 
+   char buffer[2];
+   printf("Binary value = %s\n", buffer);
+
    if (!argc)
    {
       printf("usage: trivial_example input.pcm output.pcm\n");
@@ -37,7 +46,7 @@ int main(int argc, char **argv)
    }
 
    /*Create a new encoder state */
-   encoder = opus_encoder_create(SAMPLE_RATE, CHANNELS, APPLICATION, &err);
+   encoder = opus_encoder_create(SAMPLE_RATE, CHANNELS, APPLICATION, &err);   //SAMPLE_RATE: Sampling rate of input signal (Hz)
    if (err<0)
    {
       fprintf(stderr, "failed to create an encoder: %s\n", opus_strerror(err));
@@ -47,13 +56,20 @@ int main(int argc, char **argv)
       The Opus library is designed to have good defaults, so only set
       parameters you know you need. Doing otherwise is likely to result
       in worse quality, but better. */
-   err = opus_encoder_ctl(encoder, OPUS_SET_BITRATE(BITRATE));
+   err = opus_encoder_ctl(encoder, OPUS_SET_BITRATE(BITRATE));                //BITRATE: bitrate in bits per second
    if (err<0)
    {
       fprintf(stderr, "failed to set bitrate: %s\n", opus_strerror(err));
       return EXIT_FAILURE;
    }
-   inFile = "/home/tobi/src/opusTrivial_example/MarioTest.wav";
+   err = opus_encoder_ctl(encoder, OPUS_SET_VBR(0));                //None variable Bitrate
+   if (err<0)
+   {
+      fprintf(stderr, "failed to set bitrate: %s\n", opus_strerror(err));
+      return EXIT_FAILURE;
+   }
+
+   inFile = strcat(Path, Filename);
    fin = fopen(inFile, "r");
    if (fin==NULL)
    {
@@ -69,8 +85,8 @@ int main(int argc, char **argv)
       return EXIT_FAILURE;
    }
    //outFile = "/home/tobi/src/opusTrivial_example/MarioTestEncDec.wav";
-   outFile = "/home/tobi/src/opusTrivial_example/marioTestenc.opus";
-
+   //outFile = "/home/tobi/src/opusTrivial_example/marioTestenc.opus";
+   outFile = "/home/tobi/src/opusTrivial_example/MusikRohdateien/youtube2412_11_cbr.opus";
    fout = fopen(outFile, "w");
    if (fout==NULL)
    {
@@ -137,4 +153,17 @@ int main(int argc, char **argv)
    fclose(fin);
    fclose(fout);
    return EXIT_SUCCESS;
+}
+
+
+char *my_itoa(int wert, int laenge) {
+   char *ret =(char *) malloc(laenge+1 * sizeof(char));
+   int i;
+
+   for(i  =0; i < laenge; i++) {
+      ret[laenge-i-1] = (wert % 10) + 48;
+      wert = wert / 10;
+   }
+   ret[laenge]='\0';
+   return ret;
 }
