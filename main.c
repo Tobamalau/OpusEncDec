@@ -9,6 +9,7 @@
 
 
 
+
 uint_fast16_t len = 57;//sizeof(NBbytes) / sizeof(NBbytes[0]);
 
 
@@ -32,6 +33,7 @@ int main()
          getPcm(&FrameInstanz);
          printf("pcm:%o", OpusInstanz.pcm_bytes[0]);
       }
+
       if (1)//(getchar() == 'g')
       {
         newFrame = 1;
