@@ -1,30 +1,53 @@
-#include <stdlib.h>
-#include <errno.h>
-#include <string.h>
+#include <iostream>
 #include "opus.h"
+#include <errno.h>
+#include <string>       // std::string
+#include <iostream>     // std::cout
+#include <sstream>      // std::stringstream
 #include <stdio.h>
+#include <stdlib.h>
 
+#include <unistd.h>
+#include <sys/types.h>
+#include <pwd.h>
+#include <cstring>
 
 /*The frame size is hardcoded for this sample code but it d../../../../usr/local/include/opusoesn't have to be*/
 #define FRAME_SIZE 960
-#define SAMPLE_RATE 24000 //Sampling rate of input signal (Hz)
+#define SAMPLE_RATE 48000 //Sampling rate of input signal (Hz)
 #define CHANNELS 1
 #define APPLICATION OPUS_APPLICATION_AUDIO
-#define BITRATE 192000   //bitrate in bits per second 768000=48kHz, 384000=24kHz, 192000=12kHz (500 to 512000 bits per second)
+#define BITRATE 384000   //bitrate in bits per second 768000=48kHz, 384000=24kHz, 192000=12kHz, 128000=8kHz (500 to 512000 bits per second)
 #define MAX_FRAME_SIZE 6*960
 #define MAX_PACKET_SIZE (3*1276)
+#define VBR 1        // VBR = 0, CBR = 1
+
+using namespace std;
+
+string pathBashSkript = "/src/tools/OpusEncDec/CppProjekt/makecarray.sh";
+string path = "/src/tools/OpusEncDec/MusikRohdateien/";
+string filename = "youtube";
+#if VBR
+   string mode = "_vbr";
+#else
+   string mode = "_cbr";
+#endif
+
+const char *homedir;
 
 
-char Path[] = "/home/tobi/src/opusTrivial_example/MusikRohdateien/";
-char Filename[] = "youtube24_11.wav";
 
 
-int main(int argc, char **argv)
+int main()
 {
-   char *inFile;
+
+   if ((homedir = getenv("HOME")) == NULL) {
+       homedir = getpwuid(getuid())->pw_dir;
+   }
+
    FILE *fin;
-   char *outFile;
    FILE *fout;
+   FILE *freadme;
    opus_int16 in[FRAME_SIZE*CHANNELS];
    opus_int16 out[MAX_FRAME_SIZE*CHANNELS];
    unsigned char cbits[MAX_PACKET_SIZE];
@@ -34,21 +57,11 @@ int main(int argc, char **argv)
    OpusDecoder *decoder;
    int err;
 
-   char buffer[2];
-   printf("Binary value = %s\n", buffer);
-
-   if (!argc)
-   {
-      printf("usage: trivial_example input.pcm output.pcm\n");
-      fprintf(stderr, "input and output are 16-bit little-endian raw files\n");
-      return EXIT_FAILURE;
-   }
-
    /*Create a new encoder state */
    encoder = opus_encoder_create(SAMPLE_RATE, CHANNELS, APPLICATION, &err);   //SAMPLE_RATE: Sampling rate of input signal (Hz)
    if (err<0)
    {
-      fprintf(stderr, "failed to create an encoder: %s\n", opus_strerror(err));
+      printf("failed to create an encoder: %s\n", opus_strerror(err));
       return EXIT_FAILURE;
    }
    /* Set the desired bit-rate. You can also set other parameters if needed.
@@ -58,21 +71,24 @@ int main(int argc, char **argv)
    err = opus_encoder_ctl(encoder, OPUS_SET_BITRATE(BITRATE));                //BITRATE: bitrate in bits per second
    if (err<0)
    {
-      fprintf(stderr, "failed to set bitrate: %s\n", opus_strerror(err));
+      printf("failed to set bitrate: %s\n", opus_strerror(err));
       return EXIT_FAILURE;
    }
-   err = opus_encoder_ctl(encoder, OPUS_SET_VBR(0));                //None variable Bitrate
+   err = opus_encoder_ctl(encoder, OPUS_SET_VBR(VBR));                //None variable Bitrate
    if (err<0)
    {
-      fprintf(stderr, "failed to set bitrate: %s\n", opus_strerror(err));
+      printf("failed to set bitrate: %s\n", opus_strerror(err));
       return EXIT_FAILURE;
    }
-
-   inFile = strcat(Path, Filename);
-   fin = fopen(inFile, "r");
+   {
+   stringstream tmp;
+   tmp << SAMPLE_RATE/1000;
+   string inFile = homedir + path + filename + tmp.str() + "_11" + ".wav";
+   fin = fopen(inFile.c_str(), "r");
+   }
    if (fin==NULL)
    {
-      fprintf(stderr, "failed to open input file: %s\n", strerror(errno));
+      printf("failed to open input file:\n");
 
       return EXIT_FAILURE;
    }
@@ -80,18 +96,24 @@ int main(int argc, char **argv)
    decoder = opus_decoder_create(SAMPLE_RATE, CHANNELS, &err);
    if (err<0)
    {
-      fprintf(stderr, "failed to create decoder: %s\n", opus_strerror(err));
+      printf("failed to create decoder:\n");
       return EXIT_FAILURE;
    }
-   //outFile = "/home/tobi/src/opusTrivial_example/MarioTestEncDec.wav";
-   //outFile = "/home/tobi/src/opusTrivial_example/marioTestenc.opus";
-   outFile = "/home/tobi/src/opusTrivial_example/MusikRohdateien/youtube2412_11_cbr.opus";
-   fout = fopen(outFile, "w");
+
+   stringstream tmp;
+   tmp << SAMPLE_RATE/1000 << "_" << BITRATE/16/1000 << mode;
+   string gg = tmp.str();
+   string outFileoext = homedir + path + filename + tmp.str(); //"/home/tobi/src/opusTrivial_example/MusikRohdateien/youtube2412_11_cbr.opus";
+   string outFile = outFileoext + ".opus";
+   fout = fopen(outFile.c_str(), "w");
+
    if (fout==NULL)
    {
-      fprintf(stderr, "failed to open output file: %s\n", strerror(errno));
+      printf("failed to open output file:\n");
       return EXIT_FAILURE;
    }
+   char NBbytes[10000];
+   uint NBbytesCnt = 0;
    int loopcnt = 0;
    while (1)
    {
@@ -102,7 +124,12 @@ int main(int argc, char **argv)
       /* Read a 16 bits/sample audio frame. */
       fread(pcm_bytes, sizeof(short)*CHANNELS, FRAME_SIZE, fin);
       if (feof(fin))
+      {
+         char cstr[] = {'}','\0'};
+         sprintf(NBbytes, "%s%s", NBbytes, cstr);
+         NBbytesCnt+=sizeof(cstr);
          break;
+      }
       loopcnt++;
       /* Convert from little-endian ordering. */ //Baut sich aus 1d 3f eine 16Bit Zahl
       for (i=0;i<CHANNELS*FRAME_SIZE;i++)
@@ -115,10 +142,17 @@ int main(int argc, char **argv)
          fprintf(stderr, "encode failed: %s\n", opus_strerror(nbBytes));
          return EXIT_FAILURE;
       }
-      printf("%d,", nbBytes);
-      /*int bandwith = opus_packet_get_bandwidth(cbits);
-      int nb_channels = opus_packet_get_nb_channels(cbits);
-      int nb_frames = opus_packet_get_nb_frames(cbits, nbBytes);*/
+      //printf("%d,", nbBytes);
+      string nBytes;
+      if(loopcnt == 1)
+         nBytes = "int NBbytes[] = {" + to_string(nbBytes);
+      else
+         nBytes = "; " + to_string(nbBytes);
+
+      char cstr[nBytes.size() + 1];
+      sprintf(NBbytes, "%s%s", NBbytes, nBytes.c_str());
+      NBbytesCnt+=nBytes.length();
+
       fwrite(cbits, sizeof(char), nbBytes, fout);
 
 
@@ -144,12 +178,23 @@ int main(int argc, char **argv)
       }
       i=0;
       /* Write the decoded audio to file. */
-      //fwrite(pcm_bytes, sizeof(short), frame_size*CHANNELS, fout);
    }
    /*Destroy the encoder state*/
    opus_encoder_destroy(encoder);
    opus_decoder_destroy(decoder);
    fclose(fin);
    fclose(fout);
+   string cmd = "xxd -i " + outFile + " " + outFileoext + ".c" ;
+   system(cmd.c_str());
+
+   string readmeFile = outFileoext + ".c";
+   freadme = fopen(readmeFile.c_str(), "a");
+   if (freadme==NULL)
+   {
+      printf("failed to open ReadmeFile file:\n");
+      return EXIT_FAILURE;
+   }
+   fwrite(NBbytes, sizeof(char), NBbytesCnt-1, freadme);
+   fclose(freadme);
    return EXIT_SUCCESS;
 }
