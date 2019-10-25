@@ -10,7 +10,7 @@
 
 
 
-uint_fast16_t len = 57;//sizeof(NBbytes) / sizeof(NBbytes[0]);
+
 
 
 
@@ -21,8 +21,7 @@ int main()
    struct opus OpusInstanz = {NULL, NBBYTES, NULL, {}, {}};
    struct frame FrameInstanz = {&OpusInstanz, 0, 0};
 
-   initOpus(&OpusInstanz);
-   //FrameInstanz.opus_t = &OpusInstanz;
+   initOpusFrame(&FrameInstanz);
 
    //while ()
    while(1)
@@ -39,10 +38,10 @@ int main()
         newFrame = 1;
       }
 
-      if(len-1<FrameInstanz.loopcnt)
+      if(FrameInstanz.nbbytescnt-1<FrameInstanz.loopcnt)
          break;
    }
-   printf("nbbytessum:%d\tloopcnt:%d", FrameInstanz.nbbytessum, FrameInstanz.loopcnt);
+   printf("nbbytessum:%ld\tloopcnt:%ld", FrameInstanz.nbbytessum, FrameInstanz.loopcnt);
    /*Destroy the encoder state*/
    opus_decoder_destroy(OpusInstanz.decoder);
    return EXIT_SUCCESS;

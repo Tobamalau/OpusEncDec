@@ -17,7 +17,7 @@
 #define SAMPLE_RATE 48000 //Sampling rate of input signal (Hz)
 #define CHANNELS 1
 #define APPLICATION OPUS_APPLICATION_AUDIO
-#define BITRATE 384000   //bitrate in bits per second 768000=48kHz, 384000=24kHz, 192000=12kHz, 128000=8kHz (500 to 512000 bits per second)
+#define BITRATE 128000   //bitrate in bits per second 768000=48kHz, 384000=24kHz, 192000=12kHz, 128000=8kHz (500 to 512000 bits per second)
 #define MAX_FRAME_SIZE 6*960
 #define MAX_PACKET_SIZE (3*1276)
 #define VBR 1        // VBR = 0, CBR = 1
@@ -125,7 +125,7 @@ int main()
       fread(pcm_bytes, sizeof(short)*CHANNELS, FRAME_SIZE, fin);
       if (feof(fin))
       {
-         char cstr[] = {'}','\0'};
+         char cstr[] = {'}', ';','\0'};
          sprintf(NBbytes, "%s%s", NBbytes, cstr);
          NBbytesCnt+=sizeof(cstr);
          break;
@@ -147,7 +147,11 @@ int main()
       if(loopcnt == 1)
          nBytes = "int NBbytes[] = {" + to_string(nbBytes);
       else
-         nBytes = "; " + to_string(nbBytes);
+         if(loopcnt%20 != 0)
+            nBytes = ", " + to_string(nbBytes);
+         else
+            nBytes = ",\n" + to_string(nbBytes);
+
 
       char cstr[nBytes.size() + 1];
       sprintf(NBbytes, "%s%s", NBbytes, nBytes.c_str());
@@ -195,6 +199,7 @@ int main()
       return EXIT_FAILURE;
    }
    fwrite(NBbytes, sizeof(char), NBbytesCnt-1, freadme);
+   //fwrite(to_string(NBbytesCnt).c_str(), sizeof(char), sizeof(to_string(NBbytesCnt).c_str())/sizeof(to_string(NBbytesCnt).c_str()[0]), freadme);    //write NBbytes count
    fclose(freadme);
    return EXIT_SUCCESS;
 }
