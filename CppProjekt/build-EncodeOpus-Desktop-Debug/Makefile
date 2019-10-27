@@ -14,7 +14,7 @@ CC            = gcc
 CXX           = g++
 DEFINES       = -DQT_QML_DEBUG
 CFLAGS        = -pipe -g -Wall -W -fPIC $(DEFINES)
-CXXFLAGS      = -pipe -g -std=gnu++11 -Wall -W -fPIC $(DEFINES)
+CXXFLAGS      = -pipe -g -Wall -W -fPIC $(DEFINES)
 INCPATH       = -I../EncodeOpus -I. -isystem /usr/local/include/opus -I/usr/lib/x86_64-linux-gnu/qt5/mkspecs/linux-g++
 QMAKE         = /usr/lib/qt5/bin/qmake
 DEL_FILE      = rm -f
@@ -35,7 +35,7 @@ MOVE          = mv -f
 TAR           = tar -cf
 COMPRESS      = gzip -9f
 DISTNAME      = EncodeOpus1.0.0
-DISTDIR = /home/tobias/src/tools/OpusEncDec/CppProjekt/build-EncodeOpus-Desktop-Debug/.tmp/EncodeOpus1.0.0
+DISTDIR = /home/tobi/src/tools/OpusEncDec/CppProjekt/build-EncodeOpus-Desktop-Debug/.tmp/EncodeOpus1.0.0
 LINK          = g++
 LFLAGS        = 
 LIBS          = $(SUBLIBS) -L/usr/local/lib/ -lopus 
@@ -52,7 +52,8 @@ OBJECTS_DIR   = ./
 
 SOURCES       = ../EncodeOpus/main.cpp 
 OBJECTS       = main.o
-DIST          = /usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/spec_pre.prf \
+DIST          = ../EncodeOpus/MarioTest.wav \
+		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/spec_pre.prf \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/common/unix.conf \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/common/linux.conf \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/common/sanitize.conf \
@@ -124,11 +125,11 @@ DIST          = /usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/spec_pre.prf \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/exceptions.prf \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/yacc.prf \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/lex.prf \
-		../EncodeOpus/EncodeOpus.pro ../../../../../../../usr/local/include/opus/opus_types.h \
-		../../../../../../../usr/local/include/opus/opus_projection.h \
-		../../../../../../../usr/local/include/opus/opus_multistream.h \
+		../EncodeOpus/EncodeOpus.pro ../../../../../../../usr/local/include/opus/opus.h \
 		../../../../../../../usr/local/include/opus/opus_defines.h \
-		../../../../../../../usr/local/include/opus/opus.h ../EncodeOpus/main.cpp
+		../../../../../../../usr/local/include/opus/opus_multistream.h \
+		../../../../../../../usr/local/include/opus/opus_projection.h \
+		../../../../../../../usr/local/include/opus/opus_types.h ../EncodeOpus/main.cpp
 QMAKE_TARGET  = EncodeOpus
 DESTDIR       = 
 TARGET        = EncodeOpus

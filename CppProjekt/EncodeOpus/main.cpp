@@ -35,27 +35,42 @@ string filename = "youtube";
 
 const char *homedir;
 
-
+int openFile(FILE *file, string filename, string mode) //const char *
+{
+   file = fopen(filename.c_str(), mode.c_str());
+   if (file==NULL)
+   {
+      printf("failed to open input file:\n");
+      return 0;
+   }
+   return 1;
+}
 
 
 int main()
 {
 
-   if ((homedir = getenv("HOME")) == NULL) {
+   if ((homedir = getenv("HOME")) == NULL)
        homedir = getpwuid(getuid())->pw_dir;
-   }
 
-   FILE *fin;
-   FILE *fout;
-   FILE *freadme;
+   FILE *fin, *fout, *foutWave;
    opus_int16 in[FRAME_SIZE*CHANNELS];
    opus_int16 out[MAX_FRAME_SIZE*CHANNELS];
    unsigned char cbits[MAX_PACKET_SIZE];
    int nbBytes;
-   /*Holds the state of the encoder and decoder */
    OpusEncoder *encoder;
    OpusDecoder *decoder;
    int err;
+   stringstream tmp, tmp2;
+   tmp << SAMPLE_RATE/1000;
+   string inFile = homedir + path + filename + tmp.str() + "_11" + ".wav";
+   tmp2 << SAMPLE_RATE/1000 << "_" << BITRATE/16/1000 << mode;
+   string outFileoext = homedir + path + filename + tmp2.str();
+   string outFile = outFileoext + ".opus";
+   string outFileWave = outFileoext + ".wav";
+   char NBbytes[10000];
+   uint NBbytesCnt = 0;
+   int loopcnt = 0;
 
    /*Create a new encoder state */
    encoder = opus_encoder_create(SAMPLE_RATE, CHANNELS, APPLICATION, &err);   //SAMPLE_RATE: Sampling rate of input signal (Hz)
@@ -80,16 +95,10 @@ int main()
       printf("failed to set bitrate: %s\n", opus_strerror(err));
       return EXIT_FAILURE;
    }
-   {
-   stringstream tmp;
-   tmp << SAMPLE_RATE/1000;
-   string inFile = homedir + path + filename + tmp.str() + "_11" + ".wav";
    fin = fopen(inFile.c_str(), "r");
-   }
    if (fin==NULL)
    {
       printf("failed to open input file:\n");
-
       return EXIT_FAILURE;
    }
    /* Create a new decoder state. */
@@ -99,22 +108,19 @@ int main()
       printf("failed to create decoder:\n");
       return EXIT_FAILURE;
    }
-
-   stringstream tmp;
-   tmp << SAMPLE_RATE/1000 << "_" << BITRATE/16/1000 << mode;
-   string gg = tmp.str();
-   string outFileoext = homedir + path + filename + tmp.str(); //"/home/tobi/src/opusTrivial_example/MusikRohdateien/youtube2412_11_cbr.opus";
-   string outFile = outFileoext + ".opus";
    fout = fopen(outFile.c_str(), "w");
-
    if (fout==NULL)
    {
       printf("failed to open output file:\n");
       return EXIT_FAILURE;
    }
-   char NBbytes[10000];
-   uint NBbytesCnt = 0;
-   int loopcnt = 0;
+   foutWave = fopen(outFileWave.c_str(), "w");
+   if (fout==NULL)
+   {
+      printf("failed to open outFileWave:\n");
+      return EXIT_FAILURE;
+   }
+
    while (1)
    {
       int i;
@@ -153,7 +159,6 @@ int main()
             nBytes = ",\n" + to_string(nbBytes);
 
 
-      char cstr[nBytes.size() + 1];
       sprintf(NBbytes, "%s%s", NBbytes, nBytes.c_str());
       NBbytesCnt+=nBytes.length();
 
@@ -171,7 +176,11 @@ int main()
          return EXIT_FAILURE;
       }
       if(loopcnt == 1)
+      {  //Byte 24,25 ist Sample Rate
          i=27;
+         //pcm_bytes[24]=0x40;
+         //pcm_bytes[25]=0x1F;
+      }
       else
          i=0;
       /* Convert to little-endian ordering. */
@@ -182,24 +191,29 @@ int main()
       }
       i=0;
       /* Write the decoded audio to file. */
+      fwrite(pcm_bytes, sizeof(short), frame_size*CHANNELS, foutWave);
    }
    /*Destroy the encoder state*/
    opus_encoder_destroy(encoder);
    opus_decoder_destroy(decoder);
    fclose(fin);
    fclose(fout);
+   fclose(foutWave);
    string cmd = "xxd -i " + outFile + " " + outFileoext + ".c" ;
    system(cmd.c_str());
 
    string readmeFile = outFileoext + ".c";
-   freadme = fopen(readmeFile.c_str(), "a");
-   if (freadme==NULL)
+   fout = fopen(readmeFile.c_str(), "a");
+   if (fout==NULL)
    {
       printf("failed to open ReadmeFile file:\n");
       return EXIT_FAILURE;
    }
-   fwrite(NBbytes, sizeof(char), NBbytesCnt-1, freadme);
+   fwrite(NBbytes, sizeof(char), NBbytesCnt-1, fout);
    //fwrite(to_string(NBbytesCnt).c_str(), sizeof(char), sizeof(to_string(NBbytesCnt).c_str())/sizeof(to_string(NBbytesCnt).c_str()[0]), freadme);    //write NBbytes count
-   fclose(freadme);
+   fclose(fout);
+   cmd.clear();
+   //cmd = "rm " + outFile;
+   system(cmd.c_str());
    return EXIT_SUCCESS;
 }
