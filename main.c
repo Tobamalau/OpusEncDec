@@ -7,21 +7,18 @@
 
 
 
-
-
-
-
-
-
-
 int main()
 {
    /*Holds the state of the encoder and decoder */
-   uint_fast8_t newFrame = 0;
+   uint_fast8_t newFrame = 1;
    struct opus OpusInstanz = {NULL, NBBYTES, NULL, {}, {}};
    struct frame FrameInstanz = {&OpusInstanz, 0, 0};
+   uint8_t bufferNr = 0;
 
    initOpusFrame(&FrameInstanz);
+
+   getPcm(&FrameInstanz, bufferNr);
+   bufferNr ^= (1 << 0);
 
    //while ()
    while(1)
@@ -29,13 +26,16 @@ int main()
       if(newFrame)
       {
 
-         getPcm(&FrameInstanz);
-         printf("pcm:%o", OpusInstanz.pcm_bytes[0]);
+         getPcm(&FrameInstanz, bufferNr);
+         //printf("pcm:%o", OpusInstanz.pcm_bytes[0]);
+         newFrame = 0;
+
       }
 
-      if (1)//(getchar() == 'g')
+      if (getchar() == 'g')
       {
-        newFrame = 1;
+         newFrame = 1;
+         bufferNr ^= (1 << 0);
       }
 
       if(FrameInstanz.nbbytescnt-1<FrameInstanz.loopcnt)
