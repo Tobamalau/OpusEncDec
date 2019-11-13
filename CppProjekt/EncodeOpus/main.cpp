@@ -1,5 +1,6 @@
 #include <iostream>
 #include "opus.h"
+#include "opusfunc.h"
 #include <errno.h>
 #include <string>       // std::string
 #include <iostream>     // std::cout
@@ -15,6 +16,8 @@
 #include <sys/types.h>
 #include <pwd.h>
 #include <cstring>
+
+
 
 /*The frame size is hardcoded for this sample code but it d../../../../usr/local/include/opusoesn't have to be*/
 #define FRAME_SIZE 960
@@ -40,7 +43,7 @@ string filename = "youtube";
 const char *homedir;
 int initSerial(int *serial_port);
 OpusEncoder *initOpusEnc(int *err);
-int readEncodeFrame(OpusEncoder *encoder, FILE *fin, int *nbBytes, unsigned char *cbits);
+int readEncodeFrame(OpusEncoder *encoder, FILE *fin, int *nbBytes, char *cbits);
 
 
 FILE *openFile(string filename, string mode) //const char *
@@ -60,7 +63,7 @@ int main()
    FILE *fin, *fout, *foutWave;
    opus_int16 in[FRAME_SIZE*CHANNELS];
    opus_int16 out[MAX_FRAME_SIZE*CHANNELS];
-   unsigned char cbits[MAX_PACKET_SIZE];
+   char cbits[MAX_PACKET_SIZE];
    int nbBytes;
    OpusEncoder *encoder;
    OpusDecoder *decoder;
@@ -98,15 +101,27 @@ int main()
       do{
          cout << "Give any Message (q=quitt):" << endl;
          cin >> msg;
-         msg.append(1, '\n');
+         msg.append(1, 0xff);
+         msg.append(1, 0x01);
          const char* tmp = msg.c_str();
-         write(serial_port, tmp, sizeof(tmp));
-      }while(msg != "q");
+         int size = msg.length();
+         write(serial_port, tmp, size);
+
+         char read_buf [256];
+         memset(&read_buf, '\0', sizeof(read_buf));
+         int num_bytes = read(serial_port, &read_buf, sizeof(read_buf));
+         // n is the number of bytes read. n may be 0 if no bytes were received, and can also be -1 to signal an error.
+         if (num_bytes < 0) {
+             printf("Error reading: %s", strerror(errno));
+         }
+         printf("Read %i bytes. Received message: %s", num_bytes, read_buf);
+      }while(msg[0] != 'q');
+      close(serial_port);
       break;
    }
    case 2:
    {
-      //string inFile = homedir + path + filename + tmp.str() + "_11" + ".wav";
+
       fin = fopen(inFile.c_str(), "r");
       if (fin==NULL)
       {
@@ -117,14 +132,28 @@ int main()
       if(err < 0 || encoder == NULL)
          return EXIT_FAILURE;
       readEncodeFrame(encoder, fin, &nbBytes, cbits);
+      u_int16_t headerlength = 0;
+      char *header = getOpusPacketHeader(OPUSPACKETPERREQUEST, &nbBytes, &headerlength);
       int serial_port;
       if(!initSerial(&serial_port))
          return EXIT_FAILURE;
-      cbits[nbBytes] = 0xff;
-      cbits[nbBytes+1] = 0x01;
-      write(serial_port, cbits, nbBytes + 2);
+      uint16_t escchar[] = {0xff, 0x01};
+      int mallocs = (nbBytes + HEADERMEMSYZE(OPUSPACKETPERREQUEST)) * sizeof(char);
+      char payload[mallocs];
+      memset(payload, '\0', mallocs);
+      for(int i=0; i<mallocs; i++){
+          if (i<HEADERMEMSYZE(OPUSPACKETPERREQUEST))
+              payload[i]=header[i];
+          else if(i>=HEADERMEMSYZE(OPUSPACKETPERREQUEST) && i<(nbBytes + HEADERMEMSYZE(OPUSPACKETPERREQUEST)))
+              payload[i] = cbits[i-HEADERMEMSYZE(OPUSPACKETPERREQUEST)];
+          /*else
+              payload[i] = escchar[i-(nbBytes + HEADERMEMSYZE(OPUSPACKETPERREQUEST))];
+*/
+      }
+      write(serial_port, payload, mallocs);
       opus_encoder_destroy(encoder);
       fclose(fin);
+      close(serial_port);
       break;
    }
    case 3:
@@ -181,7 +210,7 @@ int main()
             in[i]=pcm_bytes[2*i+1]<<8|pcm_bytes[2*i];
 
          /* Encode the frame. */
-         nbBytes = opus_encode(encoder, in, FRAME_SIZE, cbits, MAX_PACKET_SIZE);
+         nbBytes = opus_encode(encoder, in, FRAME_SIZE, reinterpret_cast<unsigned char*>(cbits), MAX_PACKET_SIZE);
          if (nbBytes<0)
          {
             fprintf(stderr, "encode failed: %s\n", opus_strerror(nbBytes));
@@ -209,7 +238,7 @@ int main()
             the encoder is using a constant frame size. However, that may not
             be the case for all encoders, so the decoder must always check
             the frame size returned. */
-         frame_size = opus_decode(decoder, cbits, nbBytes, out, MAX_FRAME_SIZE, 0);
+         frame_size = opus_decode(decoder, reinterpret_cast<unsigned char*>(cbits), nbBytes, out, MAX_FRAME_SIZE, 0);
          if (frame_size<0)
          {
             fprintf(stderr, "decoder failed: %s\n", opus_strerror(frame_size));
@@ -357,9 +386,9 @@ OpusEncoder *initOpusEnc(int *err)
    }
    return encoder;
 }
-int readEncodeFrame(OpusEncoder *encoder, FILE *fin, int *nbBytes, unsigned char *cbits)
+int readEncodeFrame(OpusEncoder *encoder, FILE *fin, int *nbBytes, char *cbits)
 {
-   unsigned char pcm_bytes[MAX_FRAME_SIZE*CHANNELS*2];
+   char pcm_bytes[MAX_FRAME_SIZE*CHANNELS*2];
    opus_int16 in[FRAME_SIZE*CHANNELS];
    /* Read a 16 bits/sample audio frame. */
    fread(pcm_bytes, sizeof(short)*CHANNELS, FRAME_SIZE, fin);
@@ -375,7 +404,7 @@ int readEncodeFrame(OpusEncoder *encoder, FILE *fin, int *nbBytes, unsigned char
       in[i]=pcm_bytes[2*i+1]<<8|pcm_bytes[2*i];
 
    /* Encode the frame. */
-   *nbBytes = opus_encode(encoder, in, FRAME_SIZE, cbits, MAX_PACKET_SIZE);
+   *nbBytes = opus_encode(encoder, in, FRAME_SIZE, reinterpret_cast<unsigned char*>(cbits), MAX_PACKET_SIZE);
    if (*nbBytes<0)
    {
       fprintf(stderr, "encode failed: %s\n", opus_strerror(*nbBytes));

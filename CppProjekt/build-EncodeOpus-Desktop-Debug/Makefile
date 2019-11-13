@@ -14,8 +14,8 @@ CC            = gcc
 CXX           = g++
 DEFINES       = -DQT_QML_DEBUG
 CFLAGS        = -pipe -g -Wall -W -fPIC $(DEFINES)
-CXXFLAGS      = -pipe -g -Wall -W -fPIC $(DEFINES)
-INCPATH       = -I../EncodeOpus -I. -isystem /usr/local/include/opus -I/usr/lib/x86_64-linux-gnu/qt5/mkspecs/linux-g++
+CXXFLAGS      = -pipe -g -std=gnu++11 -Wall -W -fPIC $(DEFINES)
+INCPATH       = -I../EncodeOpus -I. -I../../../../nrf52840-DK/src/opus/include/opus -I/usr/lib/x86_64-linux-gnu/qt5/mkspecs/linux-g++
 QMAKE         = /usr/lib/qt5/bin/qmake
 DEL_FILE      = rm -f
 CHK_DIR_EXISTS= test -d
@@ -35,7 +35,7 @@ MOVE          = mv -f
 TAR           = tar -cf
 COMPRESS      = gzip -9f
 DISTNAME      = EncodeOpus1.0.0
-DISTDIR = /home/tobi/src/tools/OpusEncDec/CppProjekt/build-EncodeOpus-Desktop-Debug/.tmp/EncodeOpus1.0.0
+DISTDIR = /home/tobias/src/tools/OpusEncDec/CppProjekt/build-EncodeOpus-Desktop-Debug/.tmp/EncodeOpus1.0.0
 LINK          = g++
 LFLAGS        = 
 LIBS          = $(SUBLIBS) -L/usr/local/lib/ -lopus 
@@ -50,10 +50,11 @@ OBJECTS_DIR   = ./
 
 ####### Files
 
-SOURCES       = ../EncodeOpus/main.cpp 
-OBJECTS       = main.o
-DIST          = ../EncodeOpus/MarioTest.wav \
-		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/spec_pre.prf \
+SOURCES       = ../EncodeOpus/opusfunc.cpp \
+		../EncodeOpus/main.cpp 
+OBJECTS       = opusfunc.o \
+		main.o
+DIST          = /usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/spec_pre.prf \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/common/unix.conf \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/common/linux.conf \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/common/sanitize.conf \
@@ -125,11 +126,13 @@ DIST          = ../EncodeOpus/MarioTest.wav \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/exceptions.prf \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/yacc.prf \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/lex.prf \
-		../EncodeOpus/EncodeOpus.pro ../../../../../../../usr/local/include/opus/opus.h \
-		../../../../../../../usr/local/include/opus/opus_defines.h \
-		../../../../../../../usr/local/include/opus/opus_multistream.h \
-		../../../../../../../usr/local/include/opus/opus_projection.h \
-		../../../../../../../usr/local/include/opus/opus_types.h ../EncodeOpus/main.cpp
+		../EncodeOpus/EncodeOpus.pro ../../../../nrf52840-DK/src/opus/include/opus/opus_types.h \
+		../../../../nrf52840-DK/src/opus/include/opus/opus_projection.h \
+		../../../../nrf52840-DK/src/opus/include/opus/opus_multistream.h \
+		../../../../nrf52840-DK/src/opus/include/opus/opus_defines.h \
+		../../../../nrf52840-DK/src/opus/include/opus/opus.h \
+		opusfunc.h ../EncodeOpus/opusfunc.cpp \
+		../EncodeOpus/main.cpp
 QMAKE_TARGET  = EncodeOpus
 DESTDIR       = 
 TARGET        = EncodeOpus
@@ -331,7 +334,16 @@ compiler_clean:
 
 ####### Compile
 
-main.o: ../EncodeOpus/main.cpp 
+opusfunc.o: ../EncodeOpus/opusfunc.cpp ../EncodeOpus/opusfunc.h \
+		../../../../nrf52840-DK/src/opus/include/opus/opus.h \
+		../../../../nrf52840-DK/src/opus/include/opus/opus_types.h \
+		../../../../nrf52840-DK/src/opus/include/opus/opus_defines.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o opusfunc.o ../EncodeOpus/opusfunc.cpp
+
+main.o: ../EncodeOpus/main.cpp ../../../../nrf52840-DK/src/opus/include/opus/opus.h \
+		../../../../nrf52840-DK/src/opus/include/opus/opus_types.h \
+		../../../../nrf52840-DK/src/opus/include/opus/opus_defines.h \
+		../EncodeOpus/opusfunc.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o main.o ../EncodeOpus/main.cpp
 
 ####### Install
