@@ -17,7 +17,7 @@
 #include <pwd.h>
 #include <cstring>
 
-
+#include <ctime>
 
 /*The frame size is hardcoded for this sample code but it d../../../../usr/local/include/opusoesn't have to be*/
 #define FRAME_SIZE 960
@@ -161,6 +161,7 @@ int main(int argc, char *argv[])
    case 3:/*Send via Uart continuously*/
    {
       int serial_port;
+      double elapsed_secs;
       fin = fopen(inFile.c_str(), "r");
       if (fin==NULL)
       {
@@ -171,29 +172,59 @@ int main(int argc, char *argv[])
       if(err < 0 || encoder == NULL)
          return EXIT_FAILURE;
       do{
+         clock_t begin = clock();
          if(!readEncodeFrame(encoder, fin, &nbBytes, cbits))
             break;
          u_int16_t headerlength = 0;
          char *header = getOpusPacketHeader(OPUSPACKETPERREQUEST, &nbBytes, &headerlength);
          if(!initSerial(&serial_port))
             return EXIT_FAILURE;
+
+         elapsed_secs = double(clock() - begin) / CLOCKS_PER_SEC;
+         cout << "initSerial: " << elapsed_secs << endl;
+
          int payloadSize = (nbBytes + HEADERMEMSYZE(OPUSPACKETPERREQUEST)) * sizeof(char);
          char payload[payloadSize];
          memset(payload, '\0', payloadSize);
-         for(int i=0; i<payloadSize; i++){
+         for(int i=0; i<payloadSize; i++)
+         {
              if (i<HEADERMEMSYZE(OPUSPACKETPERREQUEST))
                  payload[i]=header[i];
              else
                  payload[i] = cbits[i-HEADERMEMSYZE(OPUSPACKETPERREQUEST)];
          }
-         write(serial_port, payload, payloadSize);
+         elapsed_secs = double(clock() - begin) / CLOCKS_PER_SEC;
+         cout << "bevore write: " << elapsed_secs << endl;
+
+         int writtenBytes = write(serial_port, payload, payloadSize);
+
+         elapsed_secs = double(clock() - begin) / CLOCKS_PER_SEC;
+         cout << "write: " << elapsed_secs << endl;
+         /*
+         int writtenBytes = 0;
+         do
+         {
+               writtenBytes += write(serial_port, &payload[writtenBytes], 1);
+         }while(writtenBytes < payloadSize);
+         */
+         cout << "payloadSize: " << payloadSize << endl; //endl ist wichtig sonst wird zeile nicht direkt ausgegeben
+         /*if(loopcnt==1)
+            cout << "payloadSdddize: " << payloadSize << endl;
+            */
          char read_buf [1];
          memset(&read_buf, '\0', sizeof(read_buf));
+         elapsed_secs = double(clock() - begin) / CLOCKS_PER_SEC;
+         cout << "before read: " << elapsed_secs << endl;
          do{
+            int num_bytes = read(serial_port, &read_buf, sizeof(read_buf));
+            if(num_bytes>0)
+               cout << "\t" << read_buf[0] << endl;
 
          }while(read_buf[0] != 'r');
-         int num_bytes = read(serial_port, &read_buf, sizeof(read_buf));
          loopcnt++;
+         clock_t end = clock();
+         elapsed_secs = double(end - begin) / CLOCKS_PER_SEC;
+         cout << "looptime: " << elapsed_secs << endl;
       }while(1);
       sleep(1);
       opus_encoder_destroy(encoder);
@@ -279,10 +310,6 @@ int main(int argc, char *argv[])
          fwrite(cbits, sizeof(char), nbBytes, fout);
 
 
-         /* Decode the data. In this example, frame_size will be constant because
-            the encoder is using a constant frame size. However, that may not
-            be the case for all encoders, so the decoder must always check
-            the frame size returned. */
          frame_size = opus_decode(decoder, reinterpret_cast<unsigned char*>(cbits), nbBytes, out, MAX_FRAME_SIZE, 0);
          if (frame_size<0)
          {
@@ -375,7 +402,7 @@ int initSerial(int *serial_port)
    //tty.c_cflag |= CRTSCTS;  // Enable RTS/CTS hardware flow control
    tty.c_cflag |= CREAD | CLOCAL; // Turn on READ & ignore ctrl lines (CLOCAL = 1)
    tty.c_lflag &= ~ICANON;
-   tty.c_lflag &= ~ECHO; // Disable echo
+   tty.c_lflag |= ECHO; // echo
    tty.c_lflag &= ~ECHOE; // Disable erasure
    tty.c_lflag &= ~ECHONL; // Disable new-line echo
    tty.c_lflag &= ~ISIG; // Disable interpretation of INTR, QUIT and SUSP
@@ -386,7 +413,7 @@ int initSerial(int *serial_port)
    tty.c_oflag &= ~ONLCR; // Prevent conversion of newline to carriage return/line feed
    // tty.c_oflag &= ~OXTABS; // Prevent conversion of tabs to spaces (NOT PRESENT IN LINUX)
    // tty.c_oflag &= ~ONOEOT; // Prevent removal of C-d chars (0x004) in output (NOT PRESENT IN LINUX)
-   tty.c_cc[VTIME] = 10;    // Wait for up to 1s (10 deciseconds), returning as soon as any data is received.
+   tty.c_cc[VTIME] = 0;    // Wait for up to 1s (10 deciseconds), returning as soon as any data is received.
    tty.c_cc[VMIN] = 0;
 
    // Set in/out baud rate to B0,  B50,  B75,  B110,  B134,  B150,  B200, B300, B600, B1200, B1800, B2400, B4800, B9600, B19200, B38400, B57600, B115200, B230400, B460800
@@ -444,9 +471,12 @@ int readEncodeFrame(OpusEncoder *encoder, FILE *fin, int *nbBytes, char *cbits)
       return 0;
    }
 
+   opus_int16 eins = (pcm_bytes[25]<<8)|(pcm_bytes[24]&0xff);
+   opus_int16 zei = (pcm_bytes[25]<<8);
+
    /* Convert from little-endian ordering. */ //Baut sich aus 1d 3f eine 16Bit Zahl
    for (int i=0;i<CHANNELS*FRAME_SIZE;i++)
-      in[i]=pcm_bytes[2*i+1]<<8|pcm_bytes[2*i];
+      in[i]=(pcm_bytes[2*i+1]<<8)|(pcm_bytes[2*i]&0xff);
 
    /* Encode the frame. */
    *nbBytes = opus_encode(encoder, in, FRAME_SIZE, reinterpret_cast<unsigned char*>(cbits), MAX_PACKET_SIZE);
