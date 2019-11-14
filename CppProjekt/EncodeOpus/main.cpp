@@ -58,7 +58,7 @@ FILE *openFile(string filename, string mode) //const char *
 }
 
 
-int main()
+int main(int argc, char *argv[])
 {
    FILE *fin, *fout, *foutWave;
    opus_int16 in[FRAME_SIZE*CHANNELS];
@@ -82,17 +82,20 @@ int main()
    int loopcnt = 0;
 
 
-   cout << "1: Communicate via UART Press" << endl;
+   cout << "1: Communicate via UART" << endl;
    cout << "2: Send via Uart one Frame" << endl;
-   cout << "3: Read wav File and generate C Array" << endl;
-
+   cout << "3: Send via Uart continuously" << endl;
+   cout << "5: Read wav File and generate C Array" << endl;
    cout << "9: Quitt" << endl;
    int branch;
-   cin >> branch;
+   if(argc > 1)
+      branch = atoi(argv[1]);
+   else
+      cin >> branch;
 
    switch(branch)
    {
-   case 1:
+   case 1:  /*Communicate via UART*/
    {
       std::string msg;
       int serial_port;
@@ -119,9 +122,8 @@ int main()
       close(serial_port);
       break;
    }
-   case 2:
+   case 2:/*Send via Uart one Frame*/
    {
-
       fin = fopen(inFile.c_str(), "r");
       if (fin==NULL)
       {
@@ -137,26 +139,69 @@ int main()
       int serial_port;
       if(!initSerial(&serial_port))
          return EXIT_FAILURE;
-      uint16_t escchar[] = {0xff, 0x01};
-      int mallocs = (nbBytes + HEADERMEMSYZE(OPUSPACKETPERREQUEST)) * sizeof(char);
-      char payload[mallocs];
-      memset(payload, '\0', mallocs);
-      for(int i=0; i<mallocs; i++){
+      int payloadSize = (nbBytes + HEADERMEMSYZE(OPUSPACKETPERREQUEST)) * sizeof(char);
+      char payload[payloadSize];
+      memset(payload, '\0', payloadSize);
+      for(int i=0; i<payloadSize; i++){
           if (i<HEADERMEMSYZE(OPUSPACKETPERREQUEST))
               payload[i]=header[i];
-          else if(i>=HEADERMEMSYZE(OPUSPACKETPERREQUEST) && i<(nbBytes + HEADERMEMSYZE(OPUSPACKETPERREQUEST)))
+          else
               payload[i] = cbits[i-HEADERMEMSYZE(OPUSPACKETPERREQUEST)];
-          /*else
-              payload[i] = escchar[i-(nbBytes + HEADERMEMSYZE(OPUSPACKETPERREQUEST))];
-*/
       }
-      write(serial_port, payload, mallocs);
+      write(serial_port, payload, payloadSize);
+      sleep(1);         char read_buf [256];
+      memset(&read_buf, '\0', sizeof(read_buf));
+      int num_bytes = read(serial_port, &read_buf, sizeof(read_buf));
+
+      opus_encoder_destroy(encoder);
+      fclose(fin); 
+      close(serial_port);
+      break;
+   }
+   case 3:/*Send via Uart continuously*/
+   {
+      int serial_port;
+      fin = fopen(inFile.c_str(), "r");
+      if (fin==NULL)
+      {
+         printf("failed to open input file:\n");
+         return EXIT_FAILURE;
+      }
+      encoder = initOpusEnc(&err);
+      if(err < 0 || encoder == NULL)
+         return EXIT_FAILURE;
+      do{
+         if(!readEncodeFrame(encoder, fin, &nbBytes, cbits))
+            break;
+         u_int16_t headerlength = 0;
+         char *header = getOpusPacketHeader(OPUSPACKETPERREQUEST, &nbBytes, &headerlength);
+         if(!initSerial(&serial_port))
+            return EXIT_FAILURE;
+         int payloadSize = (nbBytes + HEADERMEMSYZE(OPUSPACKETPERREQUEST)) * sizeof(char);
+         char payload[payloadSize];
+         memset(payload, '\0', payloadSize);
+         for(int i=0; i<payloadSize; i++){
+             if (i<HEADERMEMSYZE(OPUSPACKETPERREQUEST))
+                 payload[i]=header[i];
+             else
+                 payload[i] = cbits[i-HEADERMEMSYZE(OPUSPACKETPERREQUEST)];
+         }
+         write(serial_port, payload, payloadSize);
+         char read_buf [1];
+         memset(&read_buf, '\0', sizeof(read_buf));
+         do{
+
+         }while(read_buf[0] != 'r');
+         int num_bytes = read(serial_port, &read_buf, sizeof(read_buf));
+         loopcnt++;
+      }while(1);
+      sleep(1);
       opus_encoder_destroy(encoder);
       fclose(fin);
       close(serial_port);
       break;
    }
-   case 3:
+   case 5:  /*Read wav File and generate C Array*/
    {
 
       encoder = initOpusEnc(&err);
