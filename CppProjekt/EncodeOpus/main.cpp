@@ -20,15 +20,23 @@
 #include <ctime>
 
 /*The frame size is hardcoded for this sample code but it d../../../../usr/local/include/opusoesn't have to be*/
-#define FRAME_SIZE 960
+#define FRAME_SIZE 960     //240=5ms, 960=20ms bei 48kHz
 #define SAMPLE_RATE 48000 //Sampling rate of input signal (Hz)
 #define CHANNELS 1
-#define APPLICATION OPUS_APPLICATION_AUDIO
+#define APPLICATION OPUS_APPLICATION_VOIP      //OPUS_APPLICATION_VOIP//OPUS_APPLICATION_AUDIO
 #define BITRATE 128000   //bitrate in bits per second 768000=48kHz, 384000=24kHz, 192000=12kHz, 128000=8kHz (500 to 512000 bits per second)
 #define MAX_FRAME_SIZE 6*960
 #define MAX_PACKET_SIZE (3*1276)
-#define VBR 0        // VBR = 0, CBR = 1
-#define BANDWIDTH OPUS_BANDWIDTH_FULLBAND //OPUS_BANDWIDTH_SUPERWIDEBAND:12kHz OPUS_BANDWIDTH_FULLBAND: 20kHz
+#define VBR 0        // VBR = 1, CBR = 0
+#define BANDWIDTH OPUS_BANDWIDTH_SUPERWIDEBAND //OPUS_BANDWIDTH_SUPERWIDEBAND:12kHz OPUS_BANDWIDTH_FULLBAND: 20kHz
+
+#define ANSI_COLOR_RED     "\x1b[31m"
+#define ANSI_COLOR_GREEN   "\x1b[32m"
+#define ANSI_COLOR_YELLOW  "\x1b[33m"
+#define ANSI_COLOR_BLUE    "\x1b[34m"
+#define ANSI_COLOR_MAGENTA "\x1b[35m"
+#define ANSI_COLOR_CYAN    "\x1b[36m"
+#define ANSI_COLOR_RESET   "\x1b[0m"
 
 using namespace std;
 
@@ -190,7 +198,7 @@ int main(int argc, char *argv[])
          for(int i=0; i<payloadSize; i++)
          {
              if (i<HEADERMEMSYZE(OPUSPACKETPERREQUEST))
-                 payload[i]=header[i];
+                 payload[i]= header[i];
              else
                  payload[i] = cbits[i-HEADERMEMSYZE(OPUSPACKETPERREQUEST)];
          }
@@ -201,31 +209,21 @@ int main(int argc, char *argv[])
 
          elapsed_secs = double(clock() - begin) / CLOCKS_PER_SEC;
          cout << "write: " << elapsed_secs << endl;
-         /*
-         int writtenBytes = 0;
-         do
-         {
-               writtenBytes += write(serial_port, &payload[writtenBytes], 1);
-         }while(writtenBytes < payloadSize);
-         */
          cout << "payloadSize: " << payloadSize << endl; //endl ist wichtig sonst wird zeile nicht direkt ausgegeben
-         /*if(loopcnt==1)
-            cout << "payloadSdddize: " << payloadSize << endl;
-            */
-         char read_buf [2];
+         char read_buf [6];
          memset(&read_buf, '\0', sizeof(read_buf));
          elapsed_secs = double(clock() - begin) / CLOCKS_PER_SEC;
          cout << "before read: " << elapsed_secs << endl;
          do{
             int num_bytes = read(serial_port, &read_buf, sizeof(read_buf));
             if(num_bytes>0)
-               cout << "\t" << read_buf << endl;
+               cout << "\t" << read_buf[0] << read_buf[1] << read_buf[2] << read_buf[3] << read_buf[4]<< "\t" << read_buf[5] << endl;
 
          }while(read_buf[0] != 'r');
          loopcnt++;
          clock_t end = clock();
          elapsed_secs = double(end - begin) / CLOCKS_PER_SEC;
-         cout << "looptime: " << elapsed_secs << endl;
+         cout  << ANSI_COLOR_RED << "looptime: " << elapsed_secs << ANSI_COLOR_RESET << endl;
       }while(1);
       sleep(1);
       opus_encoder_destroy(encoder);
@@ -377,7 +375,7 @@ int main(int argc, char *argv[])
 int initSerial(int *serial_port)
 {
    /*https://blog.mbedded.ninja/programming/operating-systems/linux/linux-serial-ports-using-c-cpp/*/
-   *serial_port = open("/dev/ttyACM1", O_RDWR);
+   *serial_port = open("/dev/ttyACM0", O_RDWR);
 
    // Check for errors
    if (*serial_port < 0) {
