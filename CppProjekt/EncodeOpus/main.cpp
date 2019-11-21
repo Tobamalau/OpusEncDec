@@ -27,7 +27,8 @@
 #define BITRATE 128000   //bitrate in bits per second 768000=48kHz, 384000=24kHz, 192000=12kHz, 128000=8kHz (500 to 512000 bits per second)
 #define MAX_FRAME_SIZE 6*960
 #define MAX_PACKET_SIZE (3*1276)
-#define VBR 1        // VBR = 0, CBR = 1
+#define VBR 0        // VBR = 0, CBR = 1
+#define BANDWIDTH OPUS_BANDWIDTH_FULLBAND //OPUS_BANDWIDTH_SUPERWIDEBAND:12kHz OPUS_BANDWIDTH_FULLBAND: 20kHz
 
 using namespace std;
 
@@ -211,14 +212,14 @@ int main(int argc, char *argv[])
          /*if(loopcnt==1)
             cout << "payloadSdddize: " << payloadSize << endl;
             */
-         char read_buf [1];
+         char read_buf [2];
          memset(&read_buf, '\0', sizeof(read_buf));
          elapsed_secs = double(clock() - begin) / CLOCKS_PER_SEC;
          cout << "before read: " << elapsed_secs << endl;
          do{
             int num_bytes = read(serial_port, &read_buf, sizeof(read_buf));
             if(num_bytes>0)
-               cout << "\t" << read_buf[0] << endl;
+               cout << "\t" << read_buf << endl;
 
          }while(read_buf[0] != 'r');
          loopcnt++;
@@ -376,7 +377,7 @@ int main(int argc, char *argv[])
 int initSerial(int *serial_port)
 {
    /*https://blog.mbedded.ninja/programming/operating-systems/linux/linux-serial-ports-using-c-cpp/*/
-   *serial_port = open("/dev/ttyACM0", O_RDWR);
+   *serial_port = open("/dev/ttyACM1", O_RDWR);
 
    // Check for errors
    if (*serial_port < 0) {
@@ -402,7 +403,7 @@ int initSerial(int *serial_port)
    //tty.c_cflag |= CRTSCTS;  // Enable RTS/CTS hardware flow control
    tty.c_cflag |= CREAD | CLOCAL; // Turn on READ & ignore ctrl lines (CLOCAL = 1)
    tty.c_lflag &= ~ICANON;
-   tty.c_lflag |= ECHO; // echo
+   tty.c_lflag &= ~ECHO; // echo
    tty.c_lflag &= ~ECHOE; // Disable erasure
    tty.c_lflag &= ~ECHONL; // Disable new-line echo
    tty.c_lflag &= ~ISIG; // Disable interpretation of INTR, QUIT and SUSP
@@ -417,8 +418,8 @@ int initSerial(int *serial_port)
    tty.c_cc[VMIN] = 0;
 
    // Set in/out baud rate to B0,  B50,  B75,  B110,  B134,  B150,  B200, B300, B600, B1200, B1800, B2400, B4800, B9600, B19200, B38400, B57600, B115200, B230400, B460800
-   cfsetispeed(&tty, B115200);
-   cfsetospeed(&tty, B115200);
+   cfsetispeed(&tty, B460800);
+   cfsetospeed(&tty, B460800);
 
    // Save tty settings, also checking for error
    if (tcsetattr(*serial_port, TCSANOW, &tty) != 0) {
@@ -451,6 +452,12 @@ OpusEncoder *initOpusEnc(int *err)
       return NULL;
    }
    *err = opus_encoder_ctl(encoder, OPUS_SET_VBR(VBR));                //None variable Bitrate
+   if (*err<0)
+   {
+      printf("failed to set bitrate: %s\n", opus_strerror(*err));
+      return NULL;
+   }
+   *err = opus_encoder_ctl(encoder, OPUS_SET_BANDWIDTH(BANDWIDTH));                //None variable Bitrate
    if (*err<0)
    {
       printf("failed to set bitrate: %s\n", opus_strerror(*err));
