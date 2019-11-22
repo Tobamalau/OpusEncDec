@@ -23,12 +23,12 @@
 #define FRAME_SIZE 960     //240=5ms, 960=20ms bei 48kHz
 #define SAMPLE_RATE 48000 //Sampling rate of input signal (Hz)
 #define CHANNELS 1
-#define APPLICATION OPUS_APPLICATION_VOIP      //OPUS_APPLICATION_VOIP//OPUS_APPLICATION_AUDIO
+#define APPLICATION OPUS_APPLICATION_AUDIO      //OPUS_APPLICATION_VOIP//OPUS_APPLICATION_AUDIO
 #define BITRATE 128000   //bitrate in bits per second 768000=48kHz, 384000=24kHz, 192000=12kHz, 128000=8kHz (500 to 512000 bits per second)
 #define MAX_FRAME_SIZE 6*960
 #define MAX_PACKET_SIZE (3*1276)
 #define VBR 0        // VBR = 1, CBR = 0
-#define BANDWIDTH OPUS_BANDWIDTH_SUPERWIDEBAND //OPUS_BANDWIDTH_SUPERWIDEBAND:12kHz OPUS_BANDWIDTH_FULLBAND: 20kHz
+#define BANDWIDTH OPUS_BANDWIDTH_FULLBAND //OPUS_BANDWIDTH_SUPERWIDEBAND:12kHz OPUS_BANDWIDTH_FULLBAND: 20kHz
 
 #define ANSI_COLOR_RED     "\x1b[31m"
 #define ANSI_COLOR_GREEN   "\x1b[32m"
@@ -89,6 +89,16 @@ int main(int argc, char *argv[])
    char NBbytes[10000];
    uint NBbytesCnt = 0;
    int loopcnt = 0;
+
+   cout << "Input WAV file: " << inFile << endl;
+   cout << "or /home/tobias/Music/KillingMe48.wav" << endl;
+   string file;
+
+   if(cin.get() != '\n')
+   {
+      cin >> file;
+      inFile = file;
+   }
 
 
    cout << "1: Communicate via UART" << endl;
@@ -180,17 +190,15 @@ int main(int argc, char *argv[])
       encoder = initOpusEnc(&err);
       if(err < 0 || encoder == NULL)
          return EXIT_FAILURE;
+      if(!initSerial(&serial_port))
+         return EXIT_FAILURE;
+      clock_t beginMusik = clock();
       do{
          clock_t begin = clock();
          if(!readEncodeFrame(encoder, fin, &nbBytes, cbits))
             break;
          u_int16_t headerlength = 0;
          char *header = getOpusPacketHeader(OPUSPACKETPERREQUEST, &nbBytes, &headerlength);
-         if(!initSerial(&serial_port))
-            return EXIT_FAILURE;
-
-         elapsed_secs = double(clock() - begin) / CLOCKS_PER_SEC;
-         cout << "initSerial: " << elapsed_secs << endl;
 
          int payloadSize = (nbBytes + HEADERMEMSYZE(OPUSPACKETPERREQUEST)) * sizeof(char);
          char payload[payloadSize];
@@ -221,10 +229,12 @@ int main(int argc, char *argv[])
 
          }while(read_buf[0] != 'r');
          loopcnt++;
-         clock_t end = clock();
-         elapsed_secs = double(end - begin) / CLOCKS_PER_SEC;
+         //clock_t end = clock();
+         elapsed_secs = double(clock() - begin) / CLOCKS_PER_SEC;
          cout  << ANSI_COLOR_RED << "looptime: " << elapsed_secs << ANSI_COLOR_RESET << endl;
       }while(1);
+      elapsed_secs = double(clock() - beginMusik) / CLOCKS_PER_SEC;
+      cout  << ANSI_COLOR_RED << "Endfile: " << elapsed_secs << ANSI_COLOR_RESET << endl;
       sleep(1);
       opus_encoder_destroy(encoder);
       fclose(fin);

@@ -100,7 +100,7 @@ char *getOpusPacketHeader(u_int8_t framecnt, int *framesize, u_int16_t *payloadl
    {
       p[headerPos] = (framesize[i] & 0xff);//uint16 var2 = (uint16) ~((unsigned int)var1);
       p[headerPos+1] = ((framesize[i]>>8) & 0xff);
-      *payloadlength += (p[headerPos] + 1)<<8 | (p[headerPos]);
+      *payloadlength += (p[headerPos + 1])<<8 | (p[headerPos] & 0xff);
       headerPos += 2;
    }
    return p;
