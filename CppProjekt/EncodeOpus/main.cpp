@@ -24,7 +24,7 @@
 #define SAMPLE_RATE 48000 //Sampling rate of input signal (Hz)
 #define CHANNELS 1
 #define APPLICATION OPUS_APPLICATION_AUDIO      //OPUS_APPLICATION_VOIP//OPUS_APPLICATION_AUDIO
-#define BITRATE 128000   //bitrate in bits per second 768000=48kHz, 384000=24kHz, 192000=12kHz, 128000=8kHz (500 to 512000 bits per second)
+#define BITRATE 40001   //bitrate in bits per second 768000=48kHz, 384000=24kHz, 192000=12kHz, 128000=8kHz (500 to 512000 bits per second)
 #define MAX_FRAME_SIZE 6*960
 #define MAX_PACKET_SIZE (3*1276)
 #define VBR 0        // VBR = 1, CBR = 0
@@ -91,13 +91,14 @@ int main(int argc, char *argv[])
    int loopcnt = 0;
 
    cout << "Input WAV file: " << inFile << endl;
-   cout << "or /home/tobias/Music/KillingMe48.wav" << endl;
+   cout << "or /home/tobi/Music/KillingMe48Mono.wav" << endl;
    string file;
 
    if(cin.get() != '\n')
    {
+      inFile = "/";
       cin >> file;
-      inFile = file;
+      inFile.append(file);
    }
 
 
@@ -213,19 +214,19 @@ int main(int argc, char *argv[])
          elapsed_secs = double(clock() - begin) / CLOCKS_PER_SEC;
          cout << "bevore write: " << elapsed_secs << endl;
 
-         int writtenBytes = write(serial_port, payload, payloadSize);
+         write(serial_port, payload, payloadSize);
 
          elapsed_secs = double(clock() - begin) / CLOCKS_PER_SEC;
          cout << "write: " << elapsed_secs << endl;
          cout << "payloadSize: " << payloadSize << endl; //endl ist wichtig sonst wird zeile nicht direkt ausgegeben
-         char read_buf [6];
+         char read_buf [20];
          memset(&read_buf, '\0', sizeof(read_buf));
          elapsed_secs = double(clock() - begin) / CLOCKS_PER_SEC;
          cout << "before read: " << elapsed_secs << endl;
          do{
             int num_bytes = read(serial_port, &read_buf, sizeof(read_buf));
             if(num_bytes>0)
-               cout << "\t" << read_buf[0] << read_buf[1] << read_buf[2] << read_buf[3] << read_buf[4]<< "\t" << read_buf[5] << endl;
+               cout << "\t" << read_buf << endl;
 
          }while(read_buf[0] != 'r');
          loopcnt++;
@@ -385,7 +386,7 @@ int main(int argc, char *argv[])
 int initSerial(int *serial_port)
 {
    /*https://blog.mbedded.ninja/programming/operating-systems/linux/linux-serial-ports-using-c-cpp/*/
-   *serial_port = open("/dev/ttyACM0", O_RDWR);
+   *serial_port = open("/dev/ttyACM1", O_RDWR);
 
    // Check for errors
    if (*serial_port < 0) {
@@ -423,7 +424,7 @@ int initSerial(int *serial_port)
    // tty.c_oflag &= ~OXTABS; // Prevent conversion of tabs to spaces (NOT PRESENT IN LINUX)
    // tty.c_oflag &= ~ONOEOT; // Prevent removal of C-d chars (0x004) in output (NOT PRESENT IN LINUX)
    tty.c_cc[VTIME] = 0;    // Wait for up to 1s (10 deciseconds), returning as soon as any data is received.
-   tty.c_cc[VMIN] = 0;
+   tty.c_cc[VMIN] = 0;     //Wait for 1 Char
 
    // Set in/out baud rate to B0,  B50,  B75,  B110,  B134,  B150,  B200, B300, B600, B1200, B1800, B2400, B4800, B9600, B19200, B38400, B57600, B115200, B230400, B460800
    cfsetispeed(&tty, B460800);
