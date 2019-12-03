@@ -94,13 +94,17 @@ int main(int argc, char *argv[])
    cout << "or /home/tobi/Music/KillingMe48Mono.wav" << endl;
    string file;
 
-   if(cin.get() != '\n')
+   if(argc > 1)
+      inFile = argv[1];
+   else
    {
-      inFile = "/";
-      cin >> file;
-      inFile.append(file);
+      if(cin.get() != '\n')
+      {
+         inFile = "/";
+         cin >> file;
+         inFile.append(file);
+      }
    }
-
 
    cout << "1: Communicate via UART" << endl;
    cout << "2: Send via Uart one Frame" << endl;
@@ -108,8 +112,8 @@ int main(int argc, char *argv[])
    cout << "5: Read wav File and generate C Array" << endl;
    cout << "9: Quitt" << endl;
    int branch;
-   if(argc > 1)
-      branch = atoi(argv[1]);
+   if(argc > 2)
+      branch = atoi(argv[2]);
    else
       cin >> branch;
 
@@ -182,63 +186,71 @@ int main(int argc, char *argv[])
    {
       int serial_port;
       double elapsed_secs;
-      fin = fopen(inFile.c_str(), "r");
-      if (fin==NULL)
-      {
-         printf("failed to open input file:\n");
-         return EXIT_FAILURE;
-      }
       encoder = initOpusEnc(&err);
       if(err < 0 || encoder == NULL)
          return EXIT_FAILURE;
       if(!initSerial(&serial_port))
          return EXIT_FAILURE;
-      clock_t beginMusik = clock();
-      do{
-         clock_t begin = clock();
-         if(!readEncodeFrame(encoder, fin, &nbBytes, cbits))
-            break;
-         u_int16_t headerlength = 0;
-         char *header = getOpusPacketHeader(OPUSPACKETPERREQUEST, &nbBytes, &headerlength);
 
-         int payloadSize = (nbBytes + HEADERMEMSYZE(OPUSPACKETPERREQUEST)) * sizeof(char);
-         char payload[payloadSize];
-         memset(payload, '\0', payloadSize);
-         for(int i=0; i<payloadSize; i++)
+      while(1)
+      {
+         fin = fopen(inFile.c_str(), "r");
+         if (fin==NULL)
          {
-             if (i<HEADERMEMSYZE(OPUSPACKETPERREQUEST))
-                 payload[i]= header[i];
-             else
-                 payload[i] = cbits[i-HEADERMEMSYZE(OPUSPACKETPERREQUEST)];
+            printf("failed to open input file:\n");
+            return EXIT_FAILURE;
          }
-         elapsed_secs = double(clock() - begin) / CLOCKS_PER_SEC;
-         cout << "bevore write: " << elapsed_secs << endl;
-
-         write(serial_port, payload, payloadSize);
-
-         elapsed_secs = double(clock() - begin) / CLOCKS_PER_SEC;
-         cout << "write: " << elapsed_secs << endl;
-         cout << "payloadSize: " << payloadSize << endl; //endl ist wichtig sonst wird zeile nicht direkt ausgegeben
-         char read_buf [20];
-         memset(&read_buf, '\0', sizeof(read_buf));
-         elapsed_secs = double(clock() - begin) / CLOCKS_PER_SEC;
-         cout << "before read: " << elapsed_secs << endl;
+         clock_t beginMusik = clock();
+         loopcnt = 1;
          do{
-            int num_bytes = read(serial_port, &read_buf, sizeof(read_buf));
-            if(num_bytes>0)
-               cout << "\t" << read_buf << endl;
+            clock_t begin = clock();
+            if(!readEncodeFrame(encoder, fin, &nbBytes, cbits))
+               break;
+            u_int16_t headerlength = 0;
+            char *header = getOpusPacketHeader(OPUSPACKETPERREQUEST, &nbBytes, &headerlength);
+            header[1] = loopcnt&0xff;
+            int payloadSize = (nbBytes + HEADERMEMSYZE(OPUSPACKETPERREQUEST)) * sizeof(char);
+            char payload[payloadSize];
+            memset(payload, '\0', payloadSize);
+            for(int i=0; i<payloadSize; i++)
+            {
+                if (i<HEADERMEMSYZE(OPUSPACKETPERREQUEST))
+                    payload[i]= header[i];
+                else
+                    payload[i] = cbits[i-HEADERMEMSYZE(OPUSPACKETPERREQUEST)];
+            }
+            elapsed_secs = double(clock() - begin) / CLOCKS_PER_SEC;
+            cout << "bevore write: " << elapsed_secs << endl;
 
-         }while(read_buf[0] != 'r');
-         loopcnt++;
-         //clock_t end = clock();
-         elapsed_secs = double(clock() - begin) / CLOCKS_PER_SEC;
-         cout  << ANSI_COLOR_RED << "looptime: " << elapsed_secs << ANSI_COLOR_RESET << endl;
-      }while(1);
-      elapsed_secs = double(clock() - beginMusik) / CLOCKS_PER_SEC;
-      cout  << ANSI_COLOR_RED << "Endfile: " << elapsed_secs << ANSI_COLOR_RESET << endl;
-      sleep(1);
+            write(serial_port, payload, payloadSize);
+
+            elapsed_secs = double(clock() - begin) / CLOCKS_PER_SEC;
+            cout << "write: " << elapsed_secs << endl;
+            cout << "payloadSize: " << payloadSize << endl; //endl ist wichtig sonst wird zeile nicht direkt ausgegeben
+            char read_buf [20];
+            memset(&read_buf, '\0', sizeof(read_buf));
+            elapsed_secs = double(clock() - begin) / CLOCKS_PER_SEC;
+            cout << "before read: " << elapsed_secs << "\tPacketnummer:" << loopcnt << endl;
+            do{
+               int num_bytes = read(serial_port, &read_buf, sizeof(read_buf));
+               if(num_bytes>0)
+                  cout << "\t" << read_buf << endl;
+
+            }while(read_buf[0] != 'r');
+            loopcnt++;
+            if(loopcnt == 255)
+               loopcnt = 1;
+            //clock_t end = clock();
+            elapsed_secs = double(clock() - begin) / CLOCKS_PER_SEC;
+            cout  << ANSI_COLOR_RED << "looptime: " << elapsed_secs << ANSI_COLOR_RESET << endl;
+         }while(1);
+         elapsed_secs = double(clock() - beginMusik) / CLOCKS_PER_SEC;
+         cout  << ANSI_COLOR_RED << "Endfile: " << elapsed_secs << ANSI_COLOR_RESET << endl;
+         sleep(1);
+
+         fclose(fin);
+      }
       opus_encoder_destroy(encoder);
-      fclose(fin);
       close(serial_port);
       break;
    }

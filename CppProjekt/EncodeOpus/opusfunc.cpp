@@ -92,7 +92,6 @@ char *getOpusPacketHeader(u_int8_t framecnt, int *framesize, u_int16_t *payloadl
    {
       return NULL;
    }
-   //NRF_LOG_INFO("malloc memory: %d Bytes", memorySize);
    u_int8_t headerPos = 2;
    p[0] = OPUSPACKETIDENTIFIER;        //Typ
    p[1] = framecnt;   //Size
