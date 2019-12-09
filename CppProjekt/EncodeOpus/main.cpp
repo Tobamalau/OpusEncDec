@@ -38,6 +38,8 @@
 #define ANSI_COLOR_CYAN    "\x1b[36m"
 #define ANSI_COLOR_RESET   "\x1b[0m"
 
+#define VERBOSE 0
+
 using namespace std;
 
 string pathBashSkript = "/src/tools/OpusEncDec/CppProjekt/makecarray.sh";
@@ -91,7 +93,7 @@ int main(int argc, char *argv[])
    int loopcnt = 0;
 
    cout << "Input WAV file: " << inFile << endl;
-   cout << "or /home/tobi/Music/KillingMe48Mono.wav" << endl;
+   cout << "or /home/tobias/Music/KillingMe48Mono.wav" << endl;
    string file;
 
    if(argc > 1)
@@ -222,7 +224,25 @@ int main(int argc, char *argv[])
             elapsed_secs = double(clock() - begin) / CLOCKS_PER_SEC;
             cout << "bevore write: " << elapsed_secs << endl;
 
-            write(serial_port, payload, payloadSize);
+            int total = 0;
+            int wret = 0;
+#if VERBOSE
+            int i = 0;
+            while(i<104) {
+               printf(" %02X", (uint8_t)payload[i]);
+               if (i%16==0) printf("\n");
+               i++;
+            }
+            printf("\n====================\n");
+#endif
+            do {
+               wret = write(serial_port, &payload[total], (payloadSize-total)>64?64:(payloadSize-total));
+               if (wret < 0) {
+                  printf("Error write: %d\n", errno);
+               } else {
+                  total += wret;
+               }
+            } while(total != payloadSize);
 
             elapsed_secs = double(clock() - begin) / CLOCKS_PER_SEC;
             cout << "write: " << elapsed_secs << endl;
@@ -238,7 +258,7 @@ int main(int argc, char *argv[])
 
             }while(read_buf[0] != 'r');
             loopcnt++;
-            if(loopcnt == 255)
+            if(loopcnt == 256)
                loopcnt = 1;
             //clock_t end = clock();
             elapsed_secs = double(clock() - begin) / CLOCKS_PER_SEC;
@@ -398,7 +418,7 @@ int main(int argc, char *argv[])
 int initSerial(int *serial_port)
 {
    /*https://blog.mbedded.ninja/programming/operating-systems/linux/linux-serial-ports-using-c-cpp/*/
-   *serial_port = open("/dev/ttyACM1", O_RDWR);
+   *serial_port = open("/dev/ttyACM2", O_RDWR | O_NOCTTY);
 
    // Check for errors
    if (*serial_port < 0) {
@@ -414,7 +434,8 @@ int initSerial(int *serial_port)
        printf("Error %i from tcgetattr: %s\n", errno, strerror(errno));
        return 0;
    }
-
+cfmakeraw(&tty);;
+#if 0
    tty.c_cflag &= ~PARENB; // Clear parity bit, disabling parity (most common)
    //tty.c_cflag |= PARENB;  // Set parity bit, enabling parity
    tty.c_cflag &= ~CSTOPB; // Clear stop field, only one stop bit used in communication (most common)
@@ -437,7 +458,7 @@ int initSerial(int *serial_port)
    // tty.c_oflag &= ~ONOEOT; // Prevent removal of C-d chars (0x004) in output (NOT PRESENT IN LINUX)
    tty.c_cc[VTIME] = 0;    // Wait for up to 1s (10 deciseconds), returning as soon as any data is received.
    tty.c_cc[VMIN] = 0;     //Wait for 1 Char
-
+#endif
    // Set in/out baud rate to B0,  B50,  B75,  B110,  B134,  B150,  B200, B300, B600, B1200, B1800, B2400, B4800, B9600, B19200, B38400, B57600, B115200, B230400, B460800
    cfsetispeed(&tty, B460800);
    cfsetospeed(&tty, B460800);
