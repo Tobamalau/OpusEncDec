@@ -93,7 +93,7 @@ int main(int argc, char *argv[])
    int loopcnt = 0;
 
    cout << "Input WAV file: " << inFile << endl;
-   cout << "or /home/tobias/Music/KillingMe48Mono.wav" << endl;
+   cout << "or ~/Music/KillingMe48Mono.wav" << endl;
    string file;
 
    if(argc > 1)
@@ -102,8 +102,9 @@ int main(int argc, char *argv[])
    {
       if(cin.get() != '\n')
       {
-         inFile = "/";
+         inFile = "";
          cin >> file;
+         inFile.append(homedir);
          inFile.append(file);
       }
    }
@@ -418,7 +419,7 @@ int main(int argc, char *argv[])
 int initSerial(int *serial_port)
 {
    /*https://blog.mbedded.ninja/programming/operating-systems/linux/linux-serial-ports-using-c-cpp/*/
-   *serial_port = open("/dev/ttyACM2", O_RDWR | O_NOCTTY);
+   *serial_port = open("/dev/ttyACM1", O_RDWR | O_NOCTTY);
 
    // Check for errors
    if (*serial_port < 0) {
