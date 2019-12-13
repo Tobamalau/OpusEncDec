@@ -45,6 +45,7 @@ using namespace std;
 string pathBashSkript = "/src/tools/OpusEncDec/CppProjekt/makecarray.sh";
 string path = "/src/tools/OpusEncDec/MusikRohdateien/";
 string filename = "youtube";
+string ttyCHANNEL = "/dev/ttyACM1";
 #if VBR
    string mode = "_vbr";
 #else
@@ -109,14 +110,18 @@ int main(int argc, char *argv[])
       }
    }
 
+   if(argc > 2)
+      ttyCHANNEL = argv[2];
+
    cout << "1: Communicate via UART" << endl;
    cout << "2: Send via Uart one Frame" << endl;
    cout << "3: Send via Uart continuously" << endl;
    cout << "5: Read wav File and generate C Array" << endl;
    cout << "9: Quitt" << endl;
+
    int branch;
-   if(argc > 2)
-      branch = atoi(argv[2]);
+   if(argc > 3)
+      branch = atoi(argv[3]);
    else
       cin >> branch;
 
@@ -268,7 +273,6 @@ int main(int argc, char *argv[])
          elapsed_secs = double(clock() - beginMusik) / CLOCKS_PER_SEC;
          cout  << ANSI_COLOR_RED << "Endfile: " << elapsed_secs << ANSI_COLOR_RESET << endl;
          sleep(1);
-
          fclose(fin);
       }
       opus_encoder_destroy(encoder);
@@ -419,7 +423,7 @@ int main(int argc, char *argv[])
 int initSerial(int *serial_port)
 {
    /*https://blog.mbedded.ninja/programming/operating-systems/linux/linux-serial-ports-using-c-cpp/*/
-   *serial_port = open("/dev/ttyACM1", O_RDWR | O_NOCTTY);
+   *serial_port = open(ttyCHANNEL.c_str(), O_RDWR | O_NOCTTY);
 
    // Check for errors
    if (*serial_port < 0) {
