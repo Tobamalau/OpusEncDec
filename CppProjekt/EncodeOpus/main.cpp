@@ -45,7 +45,7 @@ using namespace std;
 string pathBashSkript = "/src/tools/OpusEncDec/CppProjekt/makecarray.sh";
 string path = "/src/tools/OpusEncDec/MusikRohdateien/";
 string filename = "youtube";
-string ttyCHANNEL = "/dev/ttyACM1";
+string ttyCHANNEL = "/dev/ttyACM0";
 #if VBR
    string mode = "_vbr";
 #else
@@ -193,6 +193,9 @@ int main(int argc, char *argv[])
    case 3:/*Send via Uart continuously*/
    {
       int serial_port;
+      int payloadSize;
+      bool abort = false;
+      u_int16_t headerlength;
       double elapsed_secs;
       encoder = initOpusEnc(&err);
       if(err < 0 || encoder == NULL)
@@ -210,14 +213,30 @@ int main(int argc, char *argv[])
          }
          clock_t beginMusik = clock();
          loopcnt = 1;
+         abort = false;
          do{
             clock_t begin = clock();
-            if(!readEncodeFrame(encoder, fin, &nbBytes, cbits))
-               break;
-            u_int16_t headerlength = 0;
+            headerlength = 0;
+            if(!readEncodeFrame(encoder, fin, &nbBytes, cbits))   //End of File
+            {
+               cbits[0] = 'E';cbits[1] = 'n';cbits[2] = 'd';cbits[3] = 'O';cbits[4] = 'f';cbits[5] = 'F';cbits[6] = 'i';cbits[7] = 'l';cbits[8] = 'e';
+               abort = true;
+#if 0
+               char str1[10];
+               char str2[10];
+               strcpy(str1, "EndOfFile");
+               memcpy(str2, cbits, 9);
+               str2[9] = '\0';
+               if (strcmp(str1, str2) == 0)
+                  abort = true;
+               else
+                  abort = false;
+#endif
+
+            }
             char *header = getOpusPacketHeader(OPUSPACKETPERREQUEST, &nbBytes, &headerlength);
             header[1] = loopcnt&0xff;
-            int payloadSize = (nbBytes + HEADERMEMSYZE(OPUSPACKETPERREQUEST)) * sizeof(char);
+            payloadSize = (nbBytes + HEADERMEMSYZE(OPUSPACKETPERREQUEST)) * sizeof(char);
             char payload[payloadSize];
             memset(payload, '\0', payloadSize);
             for(int i=0; i<payloadSize; i++)
@@ -249,6 +268,9 @@ int main(int argc, char *argv[])
                   total += wret;
                }
             } while(total != payloadSize);
+            if(abort)
+               break;
+
 
             elapsed_secs = double(clock() - begin) / CLOCKS_PER_SEC;
             cout << "write: " << elapsed_secs << endl;
