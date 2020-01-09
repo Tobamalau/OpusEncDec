@@ -268,8 +268,7 @@ int main(int argc, char *argv[])
                   total += wret;
                }
             } while(total != payloadSize);
-            if(abort)
-               break;
+
 
 
             elapsed_secs = double(clock() - begin) / CLOCKS_PER_SEC;
@@ -285,6 +284,8 @@ int main(int argc, char *argv[])
                   cout << "\t" << read_buf << endl;
 
             }while(read_buf[0] != 'r');
+            if(abort)
+               break;
             loopcnt++;
             if(loopcnt == 256)
                loopcnt = 1;
