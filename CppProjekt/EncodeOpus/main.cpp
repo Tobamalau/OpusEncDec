@@ -203,7 +203,14 @@ int main(int argc, char *argv[])
       if(!initSerial(&serial_port))
          return EXIT_FAILURE;
 
-      while(1)
+      int loopCycles;
+      if(argc > 4)
+         loopCycles = atoi(argv[4]);
+      else
+         loopCycles = 100;
+
+      //while(loopCycles)
+      for(int lc = 0; lc<loopCycles; lc++)
       {
          fin = fopen(inFile.c_str(), "r");
          if (fin==NULL)
